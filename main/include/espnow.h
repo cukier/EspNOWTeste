@@ -8,9 +8,9 @@
 #ifndef MAIN_INCLUDE_ESPNOW_H_
 #define MAIN_INCLUDE_ESPNOW_H_
 
-typedef enum {
-	ENVIAR, RECEBER, TRANSCEPTOR
-} prog_t;
+//typedef enum {
+//	ENVIAR, RECEBER, TRANSCEPTOR
+//} prog_t;
 
 void espnow_run();
 

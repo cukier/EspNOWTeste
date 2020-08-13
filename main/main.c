@@ -18,6 +18,6 @@ void app_main(void) {
 	xTaskCreate(espnow_run, "example_espnow_task", 4096, NULL, 4, NULL);
 
 	while (1) {
-		vTaskDelay(100 / portTICK_RATE_MS);
+		vTaskDelay(1500 / portTICK_RATE_MS);
 	}
 }
