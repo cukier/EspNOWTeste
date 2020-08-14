@@ -27,25 +27,70 @@
 //	uint64_t pos;
 //} espnow_pkg_t;
 
+typedef enum {
+	ESPNOW_SEND_CB, ESPNOW_RECV_CB
+} espnow_event_id_t;
+
+typedef struct {
+	uint8_t mac_addr[ESP_NOW_ETH_ALEN];
+	esp_now_send_status_t status;
+} espnow_event_send_t;
+
+typedef struct {
+	uint8_t mac_addr[ESP_NOW_ETH_ALEN];
+	uint8_t *data;
+	int data_len;
+} espnow_event_recv_t;
+
+typedef union {
+	espnow_event_recv_t recv_cb;
+	espnow_event_send_t send_cb;
+} espnow_info_t;
+
+typedef struct {
+	espnow_event_id_t id;
+	espnow_info_t info;
+} espnow_event_info_t;
+
 static xQueueHandle espnow_queue;
 static const char *TAG = "espnow";
-//static espnow_pkg_t *pkg = NULL;
 
 static uint8_t broadcast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xFF };
 
-//typedef struct {
-//	uint8_t mac_addr[ESP_NOW_ETH_ALEN];
-//	esp_now_send_status_t status;
-//} espnow_event_send_t;
-//
-//typedef struct {
-//	uint8_t mac_addr[ESP_NOW_ETH_ALEN];
-//	uint8_t *data;
-//	int data_len;
-//} espnow_event_recv_t;
+static void espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data,
+		int len) {
+	if (mac_addr == NULL || data == NULL || len <= 0) {
+		ESP_LOGE(TAG, "Receive cb arg error");
+		return;
+	}
 
-int wifi_init() {
+//	memcpy(recv_ev->mac_addr, mac_addr, ESP_NOW_ETH_ALEN);
+//	free(recv_ev->data);
+//	recv_ev->data = (uint8_t*) malloc(sizeof(uint8_t) * len);
+//	memcpy(recv_ev->data, data, len);
+//	recv_ev->data_len = len;
+//	ESP_LOGI(TAG, "Recebido");
+}
+
+static void espnow_send_cb(const uint8_t *mac_addr,
+		esp_now_send_status_t status) {
+	espnow_event_info_t evt;
+	espnow_event_send_t *send_cb = &evt.info.send_cb;
+
+	if (mac_addr == NULL) {
+		ESP_LOGE(TAG, "Send cb arg error");
+		return;
+	}
+
+	evt.id = ESPNOW_SEND_CB;
+	memcpy(send_cb->mac_addr, mac_addr, ESP_NOW_ETH_ALEN);
+
+//	memcpy(send_ev->mac_addr, mac_addr, ESP_NOW_ETH_ALEN);
+//	ESP_LOGI(TAG, "Envidado");
+}
+
+static int wifi_init() {
 	ESP_ERROR_CHECK(esp_netif_init());
 	ESP_ERROR_CHECK(esp_event_loop_create_default());
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT()
@@ -63,6 +108,7 @@ int wifi_init() {
 }
 
 esp_err_t espnow_init() {
+	ESP_LOGI(TAG, "init begin...");
 
 	wifi_init();
 
@@ -74,8 +120,8 @@ esp_err_t espnow_init() {
 	}
 
 	ESP_ERROR_CHECK(esp_now_init());
-//	ESP_ERROR_CHECK(esp_now_register_send_cb(example_espnow_send_cb));
-//	ESP_ERROR_CHECK(esp_now_register_recv_cb(example_espnow_recv_cb));
+	ESP_ERROR_CHECK(esp_now_register_send_cb(espnow_send_cb));
+	ESP_ERROR_CHECK(esp_now_register_recv_cb(espnow_recv_cb));
 	ESP_ERROR_CHECK(esp_now_set_pmk((uint8_t* )CONFIG_ESPNOW_PMK));
 
 	esp_now_peer_info_t *peer = malloc(sizeof(esp_now_peer_info_t));
@@ -112,16 +158,24 @@ void espnow_run() {
 			data[cont] = cont + 1;
 		}
 
-		esp_now_send(broadcast_mac, data, 3);
-		ESP_LOGI(TAG, "enviado");
+		esp_err_t err = esp_now_send(broadcast_mac, data, 3);
+		if (err != ESP_OK) {
+			ESP_LOGE(TAG, "Send error 0x%x", err);
+		} else {
+			ESP_LOGI(TAG, "enviado");
+		}
 
 		for (cont = 0; cont < ESPNOW_QUEUE_SIZE; ++cont) {
 			data[cont] = 0;
 		}
+
 		ESP_LOGI(TAG, "1");
-		if (xQueueReceive(espnow_queue, &data, portMAX_DELAY) == pdTRUE) {
+
+		while (xQueueReceive(espnow_queue, &data, portMAX_DELAY) == pdTRUE) {
 			ESP_LOGI(TAG, "Rec: %u %u %u", data[0], data[1], data[2]);
 		}
+
 		ESP_LOGI(TAG, "2");
 	}
 }
+
