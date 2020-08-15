@@ -5,11 +5,12 @@
  *      Author: mauricio
  */
 
-#include "espnow.h"
+#include "espnow_cuki.h"
 
 #include "esp_wifi.h"
 #include "esp_now.h"
 #include "esp_log.h"
+#include "freertos/task.h"
 
 #include <unistd.h>
 #include <string.h>
@@ -28,7 +29,7 @@
 //} espnow_pkg_t;
 
 static xQueueHandle espnow_queue;
-static const char *TAG = "espnow";
+static const char *TAG = "espnow_cuki";
 //static espnow_pkg_t *pkg = NULL;
 
 static uint8_t broadcast_mac[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -52,12 +53,8 @@ int wifi_init() {
 	;
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 	ESP_ERROR_CHECK(esp_wifi_start());
-
-#if CONFIG_ESPNOW_ENABLE_LONG_RANGE
-    ESP_ERROR_CHECK( esp_wifi_set_protocol(ESPNOW_WIFI_IF, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N|WIFI_PROTOCOL_LR) );
-#endif
 
 	return 0;
 }
@@ -112,16 +109,22 @@ void espnow_run() {
 			data[cont] = cont + 1;
 		}
 
-		esp_now_send(broadcast_mac, data, 3);
-		ESP_LOGI(TAG, "enviado");
+//		esp_err_t err = esp_now_send(broadcast_mac, data, 3);
+//		ESP_LOGI(TAG, "enviado: 0x%x", err);
+
+		if (esp_now_send(broadcast_mac, data, 3) != ESP_OK) {
+			ESP_LOGE(TAG, "Send error");
+		} else {
+			ESP_LOGI(TAG, "sendo data ok");
+		}
 
 		for (cont = 0; cont < ESPNOW_QUEUE_SIZE; ++cont) {
 			data[cont] = 0;
 		}
-		ESP_LOGI(TAG, "1");
-		if (xQueueReceive(espnow_queue, &data, portMAX_DELAY) == pdTRUE) {
-			ESP_LOGI(TAG, "Rec: %u %u %u", data[0], data[1], data[2]);
-		}
-		ESP_LOGI(TAG, "2");
+//		ESP_LOGI(TAG, "1");
+//		if (xQueueReceive(espnow_queue, &data, portMAX_DELAY) == pdTRUE) {
+//			ESP_LOGI(TAG, "Rec: %u %u %u", data[0], data[1], data[2]);
+//		}
+//		ESP_LOGI(TAG, "2");
 	}
 }

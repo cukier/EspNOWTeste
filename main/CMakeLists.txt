@@ -1,4 +1,4 @@
 idf_component_register(SRCS "main.c"
-						    "espnow.c"
+						    "espnow_cuki.c"
                INCLUDE_DIRS "."
                             "include")
