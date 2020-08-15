@@ -5,8 +5,8 @@
  *      Author: mauricio
  */
 
-#ifndef MAIN_INCLUDE_ESPNOW_CUKI_H_
-#define MAIN_INCLUDE_ESPNOW_CUKI_H_
+#ifndef MAIN_INCLUDE_ESPNOW_H_
+#define MAIN_INCLUDE_ESPNOW_H_
 
 //typedef enum {
 //	ENVIAR, RECEBER, TRANSCEPTOR
@@ -14,4 +14,4 @@
 
 void espnow_run();
 
-#endif /* MAIN_INCLUDE_ESPNOW_CUKI_H_ */
+#endif /* MAIN_INCLUDE_ESPNOW_H_ */
