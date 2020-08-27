@@ -81,6 +81,13 @@ esp_err_t espnow_init() {
 
 	wifi_init();
 
+	espnow_queue = xQueueCreate(ESPNOW_QUEUE_SIZE, sizeof(espnow_event_recv_t));
+
+	if (espnow_queue == NULL) {
+		ESP_LOGE(TAG, "Create mutex fail");
+		return ESP_FAIL;
+	}
+
 	ESP_ERROR_CHECK(esp_now_init());
 	ESP_ERROR_CHECK(esp_now_register_recv_cb(espnow_recv_cb));
 	ESP_ERROR_CHECK(esp_now_set_pmk((uint8_t* )CONFIG_ESPNOW_PMK));
@@ -107,7 +114,7 @@ esp_err_t espnow_init() {
 void espnow_run() {
 	int cont, send_cont = 0;
 	uint8_t data[ESPNOW_QUEUE_SIZE] = { 0 };
-	espnow_event_recv_t evt;
+	static espnow_event_recv_t evt;
 
 	ESP_ERROR_CHECK(espnow_init());
 	ESP_LOGI(TAG, "init ok");
@@ -134,13 +141,15 @@ void espnow_run() {
 			ESP_LOGI(TAG, "Recebido: %u de "MACSTR"", evt.data_len,
 					MAC2STR(evt.mac_addr));
 
-			for (cont = 0; cont < evt.data_len; ++cont) {
-				ESP_LOGI(TAG, "%5d-0x%x ", cont, evt.data[cont]);
-			}
+			if (evt.data_len > 0) {
+				for (cont = 0; cont < evt.data_len; ++cont) {
+					ESP_LOGI(TAG, "%5d-0x%x ", cont, evt.data[cont]);
+				}
 
-			free(evt.data);
-			evt.data = NULL;
-			evt.data_len = 0;
+				free(evt.data);
+				evt.data = NULL;
+				evt.data_len = 0;
+			}
 		}
 	}
 }
